@@ -7,6 +7,9 @@ kill:
 port:
 	@echo port=$(PORT)
 
+build-watch:
+	node buildWatchWat.js
+
 
 PORT := 4242
 RECIPE := $(firstword $(MAKECMDGOALS))
