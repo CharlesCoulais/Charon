@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+  "settings": {
+    "workbench.colorCustomizations": {
+      "titleBar.activeBackground": "#354535",
+      "titleBar.inactiveBackground": "#95A595",
+      "titleBar.activeForeground": "#FFF",
+      "titleBar.inactiveForeground": "#333"
+    },
+    "window.title": "Mythics'Charon: WASM/JS POC"
+  }
+}

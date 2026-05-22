@@ -7,8 +7,11 @@ kill:
 port:
 	@echo port=$(PORT)
 
+build-once:
+	@node builder/build.js
+
 build-watch:
-	node buildWatchWat.js
+	@node builder/buildWatch.js
 
 
 PORT := 4242

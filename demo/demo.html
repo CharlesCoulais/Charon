@@ -4,11 +4,53 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="./demo.css"/>
-  <title>New Project</title>
+  <title>CHARON - demo</title>
+  <style>
+    html, body {
+      min-height: 100%;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    h1, p {
+      width: 600px;
+    }
+  </style>
 </head>
 <body>
-  
 
-  <script type="module" src="./demo.js"></script>
+<h1>CHARON - demo</h1>
+
+<p>
+  The HTML string parsed is below.
+  Open browser console to see parsing logs.
+  You can modify the HTML and parse it by clicking the button.
+</p>
+
+<textarea id="code" style=" width: 600px; height: 500px;">
+  - Non case sensitive for tag names
+  - Ignore useless space chars
+  - Parse element attributes
+  <sPan class="className1 className2 className3"   id="Id1" 
+    id="Id2"  
+  >
+    - Should auto close this open tag without corresponding end tag
+    <i>
+    - Ignore orphan closing tags
+    w<strong>o</b></b></b></b></strong>rld
+    <img>
+    - Self-closing tag detection (this text node will not be a children of IMG element even if the element has no self-closing char)
+  </Span>
+  - Another orphan to ignore
+  </div>
+  - Malformed must be interpreted as text nodes
+  <div
+  </div
+</textarea>
+
+<div style="width: 600px; margin-top: 20px; display: flex; justify-content: end;">
+  <button id="parseBt" style="font-size: 20px; padding: 10px 20px">Parse</button> 
+</div>
+  
+<script type="module" src="../src/Charon.js"></script>
+<script type="module" src="./demo.js"></script>
 </body>
 </html>
