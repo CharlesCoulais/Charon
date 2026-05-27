@@ -2,17 +2,11 @@ import { WasmMamoryHandler } from "./WasmMemoryHandler.js";
 import { createWasmProxy } from "./WasmProxy.js";
 
 export async function createWasmInstance(wasmFileUrl, importObject = {}) {
-  const memory = new WebAssembly.Memory({ initial: 1 });
-  const memoryHanler = new WasmMamoryHandler(memory);
-
-  importObject = {
-    js: { mem: memoryHanler.memory },
-    ...createImportProxy(importObject, memoryHanler),
-  };
+  const memoryHanler = new WasmMamoryHandler(importObject.shared.mem);
   
   const source = await WebAssembly.instantiateStreaming(
     fetch(wasmFileUrl),
-    importObject,
+    createImportProxy(importObject, memoryHanler),
   );
 
   return createWasmProxy(source, memoryHanler);
@@ -29,7 +23,7 @@ function createImportProxy(importObj, memoryHanler) {
           if (typeof target[key] === 'function') {
             return (...args) => target[key].apply(memoryHanler, args);
           }
-          return value;
+          return target[key];
         }
       });
     }

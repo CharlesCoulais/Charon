@@ -136,7 +136,13 @@ let wasmInstance;
 export const parser = {
   async parseHTML(htmlStr) {
     if (!wasmInstance) {
-      wasmInstance = await createWasmInstance('/build/htmlParser.wasm', importObject);
+      const sharedMem = new WebAssembly.Memory({ initial: 1 });
+      wasmInstance = await createWasmInstance('/build/htmlParser.wasm', {
+        shared: {
+          mem: sharedMem,
+        },
+        ...importObject,
+      });
     }
 
     return wasmInstance.parseHTML(

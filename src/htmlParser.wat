@@ -8,10 +8,13 @@
   (import "export" "logEndTag" (func $logEndTag (param i32) (param i32) (param $el externref)))
   (import "export" "isEndTagOf" (func $isEndTagOf (param i32) (param i32) (param $el externref) (result i32)))
   (import "export" "isOrphanEndTag" (func $isOrphanEndTag (param i32) (param i32) (param $el externref) (result i32)))
-  (import "js" "mem" (memory 1))
+  (import "shared" "mem" (memory 1))
   
+  ;; TYPES
+  (type $pi32 (func (param $i i32)))
 
-  ;;LOG FUNCTIONS
+
+  ;; LOG FUNCTIONS
   (func $logBool (param i32)
     i32.const 1
     local.get 0
@@ -22,19 +25,19 @@
     local.get 0
     call $log
   )
-  (func $logChar (type $eachFnType)
+  (func $logChar (type $pi32)
     i32.const 3
     local.get 0
     call $log
   )
-  (func $logCharAt (type $eachFnType)
+  (func $logCharAt (type $pi32)
     i32.const 3
     (call $getValueAt (local.get 0))
     call $log
   )
 
 
-  ;;MEMORY VALUES GETTERS
+  ;; MEMORY VALUES GETTERS
   (func $i32ToI8Index (param i32) (result i32)
     (i32.mul (local.get 0) (i32.const 4))
   )
@@ -100,26 +103,7 @@
     i32.sub
   )
 
-  ;;FOREACH LOOP
-  (table $eachTable 1 funcref)
-  (type $eachFnType (func (param $i i32)))
 
-  (func $foreach (param $i i32) (param $end i32) (param $fn funcref)
-    (i32.lt_s (local.get $i) (local.get $end))
-    (if
-      (then
-        (loop $loop
-          (table.set $eachTable (i32.const 0) (local.get $fn))
-          (call_indirect $eachTable (type $eachFnType) (local.get $i) (i32.const 0))
-        
-          (local.set $i (call $inz (local.get $i)))
-
-          (i32.lt_u (local.get $i) (local.get $end))
-          br_if $loop
-        )
-      )
-    )
-  )
 
 
   ;;MEMORY COMPARE FUNCTIONS
