@@ -1,5 +1,6 @@
 const fs = require('fs');
-const { build } = require('./buildFunction.js')
+const { build } = require('./buildFunction.js');
+const { foreachWatFile } = require('./foreachWatFile.js');
 
 
 const compiling = {};
@@ -17,7 +18,7 @@ fs.watch(
     if (!compiling[filename]) {
       console.clear();
       console.log(`Change detected in '${filename}'...`);
-      compiling[filename] =  setTimeout(async() => {
+      compiling[filename] = setTimeout(async() => {
         await build(filename);
         delete compiling[filename];
       }, 500);
@@ -27,6 +28,9 @@ fs.watch(
 
 (async function () {
   console.clear();
-  await build('htmlParser.wat');
+  await foreachWatFile(filename => {
+    console.log(`Compiling ${filename}...`);
+    return build(filename);
+  });
   console.log('waiting for changes in source wap files...');
 })();

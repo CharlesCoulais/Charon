@@ -1,4 +1,8 @@
 const { build } = require('./buildFunction.js');
+const { foreachWatFile } = require('./foreachWatFile.js');
 
-console.log('Compiling htmlParser.wat...');
-build('htmlParser.wat');
+
+foreachWatFile(filename => {
+  console.log(`Compiling ${filename}...`);
+  build(filename);
+});

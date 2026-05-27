@@ -1,3 +1,9 @@
+build-once:
+	@node builder/build.js
+
+build-watch:
+	@node builder/buildWatch.js
+	
 demo: kill
 	@python3 -m http.server $(PORT) --directory . & open http://localhost:4242/demo/demo.html
 
@@ -6,12 +12,6 @@ kill:
 
 port:
 	@echo port=$(PORT)
-
-build-once:
-	@node builder/build.js
-
-build-watch:
-	@node builder/buildWatch.js
 
 
 PORT := 4242
