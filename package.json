@@ -1,0 +1,25 @@
+{
+  "name": "charon",
+  "version": "1.0.0",
+  "description": "Exercice to explore WebAssembly",
+  "keywords": [
+    "html",
+    "parser",
+    "webassembly"
+  ],
+  "homepage": "https://github.com/CharlesCoulais/Charon#readme",
+  "bugs": {
+    "url": "https://github.com/CharlesCoulais/Charon/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CharlesCoulais/Charon.git"
+  },
+  "license": "ISC",
+  "author": "Charles Coulais",
+  "type": "commonjs",
+  "main": "src/Charon.js",
+  "scripts": {
+    "build": "node builder/build.js"
+  }
+}

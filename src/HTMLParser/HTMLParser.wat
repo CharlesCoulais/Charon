@@ -1,4 +1,5 @@
 (module
+  ;; IMPORTS
   (import "export" "log" (func $log (param i32) (param i32)))
   (import "export" "registerTextNode" (func $registerTextNode (param i32) (param i32) (param $parentEl externref)))
   (import "export" "createElement" (func $createElement (param i32) (param i32) (result externref)))
@@ -9,27 +10,15 @@
   (import "export" "isEndTagOf" (func $isEndTagOf (param i32) (param i32) (param $el externref) (result i32)))
   (import "export" "isOrphanEndTag" (func $isOrphanEndTag (param i32) (param i32) (param $el externref) (result i32)))
   (import "shared" "mem" (memory 1))
+  (import "logger" "logBool" (func $logBool (type $pi32)))
+  (import "logger" "logI32" (func $logI32 (type $pi32)))
+  (import "logger" "logChar" (func $logChar (type $pi32)))
   
   ;; TYPES
   (type $pi32 (func (param $i i32)))
 
 
   ;; LOG FUNCTIONS
-  (func $logBool (param i32)
-    i32.const 1
-    local.get 0
-    call $log
-  )
-  (func $logI32 (param i32)
-    i32.const 2
-    local.get 0
-    call $log
-  )
-  (func $logChar (type $pi32)
-    i32.const 3
-    local.get 0
-    call $log
-  )
   (func $logCharAt (type $pi32)
     i32.const 3
     (call $getValueAt (local.get 0))
@@ -275,7 +264,7 @@
   (global $argsCount (mut i32) (i32.const 0))
 
   (global $ltChar (mut i32) (i32.const 0))
-  (global $gtChar (mut i32) (i32.const 0))
+  (global $gtChar (mut i32) (i32.const 1))
   (global $slashChar (mut i32) (i32.const 2))
   (global $tagCharsIndex (mut i32) (i32.const 3)) ;;tag chars list
   (global $spaceCharsIndex (mut i32) (i32.const 4)) ;;space chars list

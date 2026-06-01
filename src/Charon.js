@@ -1,3 +1,3 @@
-import { parser } from "./HTMLParser.js";
+import { parser } from "./HTMLParser/HTMLParser.js";
 
 export default { parser };
