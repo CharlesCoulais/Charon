@@ -1,7 +1,7 @@
-const path = require('path');
+const { join, relative} = require('path');
 const fs = require('fs');
 
-const sourcePath = path.join(__dirname, '../src');
+const sourcePath = join(__dirname, '../src');
 
 function foreachWatFile(callback, dirPath = sourcePath) {
   return new Promise(resolve => {
@@ -12,18 +12,20 @@ function foreachWatFile(callback, dirPath = sourcePath) {
 
       resolve(
         Promise.all(
-          files
-            .filter(filename => /\.wat$/.test(filename))
-            .map(filename => {
-              const path = `${dirPath}/${filename}`
-              const isDir = fs.lstatSync(path).isDirectory();
+          files.map(filename => {
+            const path = `${dirPath}/${filename}`
+            const isDir = fs.lstatSync(path).isDirectory();
 
-              if (isDir) {
-                return foreachWatFile(callback, path);
-              }
-              
-              callback(filename);
-            }),
+            if (isDir) {
+              return foreachWatFile(callback, path);
+            }
+
+            if (!/\.wat$/.test(filename)) {
+              return;
+            }
+            
+            return callback(relative( './src', path));
+          }),
         ),
       );
     });
