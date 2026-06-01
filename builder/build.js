@@ -1,7 +1,6 @@
 const { exec } = require('child_process');
 const { mkdirSync, existsSync, watch, unlink, rmSync, readdir, lstatSync } = require('fs');
 const { dirname, join, basename, relative } = require('path');
-const { foreachFile } = require('./foreachFile.js');
 const { stdout } = require('process');
 
 
