@@ -1,8 +1,8 @@
 build-once:
-	@node builder/build.js
+	@npm run build
 
 build-watch:
-	@node builder/buildWatch.js
+	@npm run build watch
 	
 demo: kill
 	@python3 -m http.server $(PORT) --directory . & open http://localhost:4242/demo/demo.html
