@@ -1,38 +1,70 @@
-import { RootElement } from "../nodes/rootElement.js";
-import { parsingChars } from "../parser/chars.js";
-import { exportedFunctions } from "../parser/parsingFunctions.js";
-import { WasmMamoryHandler } from "../wasm/WasmMemoryHandler.js";
-import { createWasmLogger } from "../wasmLogger/logger.js";
+import { RootElement } from "./nodes/rootElement.js";
+import { spaceCharsetString, tagnameCharsetString, quoteCharsetString } from "./charsets.js";
+import { createParsingFunctions } from "./parsingFunctions.js";
+//import { createWasmLogger } from "../wasmLogger/logger.js";
+import { createWasmLogicOperators } from "../wasmLogicOperators/wasmLogicOperators.js";
+import { createStringCursor } from "../stringCursor/stringCursor.js";
+import { createWasmCharset } from "../wasmCharset/wasmCharset.js";
+import { createHooks } from "./hooks.js";
+import { chronoFetch } from "../timers/chronoFetch.js";
+import { chronoWSInstantiateStreaming } from "../timers/chronoWSInstantiateStreaming.js";
 
 
-const parserReady = new Promise(async resolve => {
-  const mem = new WebAssembly.Memory({ initial: 1 });
-  const memoryHanler = new WasmMamoryHandler(mem);
-  const wasmLoggerExports = await createWasmLogger();
+// Use my fetch cache to prefetch
+chronoFetch('/build/HTMLParser.wasm');
 
+export async function createHTMLParser(options) {
+  console.groupCollapsed('Init');
+  console.time('Init done in');
+
+  // parallele loadings
+  const [
+    { cursor: htmlCursor, setContent },
+    { wCharset: spaceCharset },
+    { wCharset: tagnameCharset },
+    { wCharset: quoteCharset },
+    { logicOperators },
+    //{ logger },
+    fetched
+  ] = await Promise.all([
+    createStringCursor(),
+    createWasmCharset(spaceCharsetString, { activeLog: false, logKey: 'Spaces' }),
+    createWasmCharset(tagnameCharsetString, { activeLog: true, logKey: 'Tagname' }),
+    createWasmCharset(quoteCharsetString, { activeLog: true, logKey: 'Tagname' }),
+    createWasmLogicOperators(),
+    //createWasmLogger(),
+    chronoFetch('/build/HTMLParser.wasm')
+  ]);
+
+  const hooks = createHooks(options);
   const importObject = {
-    shared: { mem },
-    export: Object.entries(exportedFunctions).reduce((cum, [key, fn]) => {
-      cum[key] = fn.bind(memoryHanler);
-      return cum;
-    }, {}),
-    ...wasmLoggerExports,
+    js: createParsingFunctions(hooks),
+    htmlCursor,
+    spaceCharset,
+    tagnameCharset,
+    quoteCharset,
+    logicOperators,
+    //logger,
   };
 
-  const source = await WebAssembly.instantiateStreaming(
-    fetch('/build/HTMLParser.wasm'),
+  const source = await chronoWSInstantiateStreaming(
+    fetched,
     importObject,
   );
 
-  resolve((htmlStr, options) => {
-    memoryHanler.set(...parsingChars, htmlStr);
-    return source.instance.exports.parseHTML(new RootElement());
-  });
-});
+  console.groupEnd();
+  console.timeEnd('Init done in');
 
-
-export const parser = {
-  parseHTML(htmlStr, options) {
-    return parserReady.then(parseFn => parseFn(htmlStr, options));
-  }
+  return {
+    parse(htmlStr) {
+      console.time('HTML parsed in');
+      setContent(htmlStr);
+      const rootEl = new RootElement();
+      hooks.start(rootEl);
+      const parsed = source.instance.exports.parseHTML(rootEl);
+      const result = hooks.complete(parsed) || parsed;
+      console.timeEnd('HTML parsed in');
+      return result;
+    }
+  };
 };

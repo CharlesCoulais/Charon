@@ -30,7 +30,7 @@
   - Ignore useless space chars
   - Parse element attributes
   <sPan class="className1 className2 className3"   id="Id1" 
-    id="Id2"  
+    id="Id2"attr=42 attr2
   >
     - Should auto close this open tag without corresponding end tag
     <i>
@@ -49,8 +49,10 @@
 <div style="width: 600px; margin-top: 20px; display: flex; justify-content: end;">
   <button id="parseBt" style="font-size: 20px; padding: 10px 20px">Parse</button> 
 </div>
+
   
 <script type="module" src="../src/Charon.js"></script>
 <script type="module" src="./demo.js"></script>
+
 </body>
 </html>

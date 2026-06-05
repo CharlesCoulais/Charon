@@ -1,808 +1,431 @@
 (module
   ;; IMPORTS
-  (import "export" "log" (func $log (param i32) (param i32)))
-  (import "export" "registerTextNode" (func $registerTextNode (param i32) (param i32) (param $parentEl externref)))
-  (import "export" "createElement" (func $createElement (param i32) (param i32) (result externref)))
-  (import "export" "registerElement" (func $registerElement (param $el externref) (param $parentEl externref)))
-  (import "export" "isSelfClosingEl" (func $isSelfClosingEl (param $el externref) (result i32)))
-  (import "export" "registerElementAttribute"  (func $registerElementAttribute (param i32) (param i32) (param i32) (param i32) (param $el externref)))
-  (import "export" "logEndTag" (func $logEndTag (param i32) (param i32) (param $el externref)))
-  (import "export" "isEndTagOf" (func $isEndTagOf (param i32) (param i32) (param $el externref) (result i32)))
-  (import "export" "isOrphanEndTag" (func $isOrphanEndTag (param i32) (param i32) (param $el externref) (result i32)))
-  (import "shared" "mem" (memory 1))
-  (import "logger" "logBool" (func $logBool (type $pi32)))
-  (import "logger" "logI32" (func $logI32 (type $pi32)))
-  (import "logger" "logChar" (func $logChar (type $pi32)))
+  (import "js" "registerTextNode" (func $js.registerTextNode (type $ext|ext)))
+  (import "js" "createElement" (func $js.createElement (type $ext=>ext)))
+  (import "js" "registerElement" (func $js.registerElement (type $ext|ext)))
+  (import "js" "isSelfClosingEl" (func $js.isSelfClosingEl (type $ext=>i32)))
+  (import "js" "registerAttribute"  (func $js.registerAttribute (type $ext|ext|ext)))
+  (import "js" "registerClosingTag" (func $js.registerClosingTag (type $ext|ext)))
+  (import "js" "isClosingTagOf" (func $js.isClosingTagOf (type $ext|ext=>i32)))
+  (import "js" "isOrphanClosingTag" (func $js.isOrphanClosingTag (type $ext|ext=>i32)))
+  (import "js" "createMissingClosingTag" (func $js.createMissingClosingTag (type $ext|ext)))
+  (import "js" "ignoreOrphanClosingTag" (func $js.ignoreOrphanClosingTag (type $ext)))
+
+  ;; (import "logger" "logBool" (func $logBool (type $i32)))
+  ;; (import "logger" "logI32" (func $logI32 (type $i32)))
+  ;; (import "logger" "logChar" (func $logChar (type $i32)))
+  ;; (import "logger" "logStart" (func $logStart (type $i32)))
+  ;; (import "logger" "logEnd" (func $logEnd (type $i32)))
+  ;; (import "logger" "logRef" (func $logRef (type $ext)))
+
+  (import "logicOperators" "and" (func $AND (type $int|int=>int)))
+  (import "logicOperators" "not" (func $NOT (type $int=>int)))
+
+  (import "htmlCursor" "cursor.log" (func $html.cursor.log))
+  (import "htmlCursor" "cursor.get" (func $html.cursor.get (type $=>int)))
+  (import "htmlCursor" "cursor.set" (func $html.cursor.set (type $i32)))
+  (import "htmlCursor" "cursor.inz" (func $html.cursor.inz))
+  (import "htmlCursor" "cursor.char" (func $html.cursor.char (type $=>int)))
+  (import "htmlCursor" "cursor.next" (func $html.cursor.next (type $=>int)))
+  (import "htmlCursor" "cursor.nextChar" (func $html.cursor.nextChar (type $=>int)))
+  (import "htmlCursor" "isEnd" (func $html.isEnd (type $=>int)))
+  (import "htmlCursor" "cursor.save" (func $html.cursor.save))
+  (import "htmlCursor" "cursor.restaure" (func $html.cursor.restaure))
+  (import "htmlCursor" "cursor.hasMoved" (func $html.cursor.hasMoved (type $=>int)))
+  (import "htmlCursor" "cursor.char.save" (func $html.cursor.char.save))
+  (elem declare func $html.cursor.isSavedChar)
+  (import "htmlCursor" "cursor.isSavedChar" (func $html.cursor.isSavedChar (type $=>int)))
+  (import "htmlCursor" "select.while" (func $html.select.while (type $fn)))
+  (import "htmlCursor" "select.until" (func $html.select.until (type $fn)))
+  (import "htmlCursor" "select.fromSaved" (func $html.select.fromSaved))
+  (import "htmlCursor" "select.from" (func $html.select.from (type $i32)))
+  (import "htmlCursor" "selection.length" (func $html.selection.length (type $=>int)))
+  (import "htmlCursor" "selection.get" (func $html.selection.get (type $=>ext)))
+  (import "htmlCursor" "selection.clear" (func $html.selection.clear))
+  (import "htmlCursor" "skip.while" (func $html.skip.while (type $fn)))
+  (import "htmlCursor" "skip.until" (func $html.skip.until (type $fn)))
   
+  (elem declare func $spaceCharset.includes)
+  (import "spaceCharset" "includes" (func $spaceCharset.includes (type $int=>int)))
+  (elem declare func $tagnameCharset.includes)
+  (import "tagnameCharset" "includes" (func $tagnameCharset.includes (type $int=>int)))
+  (elem declare func $quoteCharset.includes)
+  (import "quoteCharset" "includes" (func $quoteCharset.includes (type $int=>int)))
+
+
   ;; TYPES
-  (type $pi32 (func (param $i i32)))
+  (type $=>int (func (result i32)))
+  (type $i32 (func (param i32)))
+  (type $int=>int (func (param i32) (result i32)))
+  (type $int|int=>int (func (param i32) (param i32) (result i32)))
 
-
-  ;; LOG FUNCTIONS
-  (func $logCharAt (type $pi32)
-    i32.const 3
-    (call $getValueAt (local.get 0))
-    call $log
-  )
-
-
-  ;; MEMORY VALUES GETTERS
-  (func $i32ToI8Index (param i32) (result i32)
-    (i32.mul (local.get 0) (i32.const 4))
-  )
-
-  (func $getValueHeaderI32Index (param $valueIndex i32) (result i32)
-    local.get $valueIndex
-    i32.const 3
-    i32.mul
-    i32.const 2
-    i32.add
-  )
-
-  (func $getValueType (param $valueIndex i32) (result i32)
-    (call $getValueHeaderI32Index (local.get $valueIndex))
-    call $i32ToI8Index
-    i32.load
-  )
-
-  (func $getValueOffset (param $valueIndex i32) (result i32)
-    local.get $valueIndex
-    call $getValueHeaderI32Index
-    i32.const 1
-    i32.add
-    call $i32ToI8Index
-    i32.load
-    call $i32ToI8Index
-  )
+  (type $fn (func (param funcref)))
   
-  (func $getValueLength (param $valueIndex i32) (result i32)
-    local.get $valueIndex
-    call $getValueHeaderI32Index
-    i32.const 2
-    i32.add
-    call $i32ToI8Index
-    i32.load
-  )
-
-  (func $getValueEnd (param $valueIndex i32) (result i32)
-    (call $getValueOffset (local.get $valueIndex))
-    (call $getValueLength (local.get $valueIndex))
-    i32.add
-  )
-
-  (func $getValueAt (param i32) (result i32)
-    (i32.load8_u (local.get 0))
-  )
-
-  (func $isValueEnd (param $i i32) (result i32)
-    (i32.eqz (call $getValueAt (local.get $i)))
-  )
+  (type $=>ext (func (result externref)))
+  (type $ext (func (param externref)))
+  (type $ext=>ext(func (param externref) (result externref)))
+  (type $ext|ext (func (param externref) (param externref)))
+  (type $ext|ext|ext (func (param externref) (param externref) (param externref)))
+  (type $ext|ext=>i32(func (param externref) (param externref) (result i32)))
+  (type $ext=>i32 (func (param externref) (result i32)))
 
 
-  ;;INCREMENT/DECREMENT FUNCTIONS
-  (func $inz (param i32) (result i32)
-    local.get 0
-    i32.const 1
-    i32.add
-  )
+  ;; SPECIAL CHARS
+  (global $ltChar (mut i32) (i32.const 60)) ;; <
+  (global $eqChar (mut i32) (i32.const 61)) ;; =
+  (global $gtChar (mut i32) (i32.const 62)) ;; >
+  (global $slashChar (mut i32) (i32.const 47)) ;; /
 
-  (func $dnz (param i32) (result i32)
-    local.get 0
-    i32.const 1
-    i32.sub
-  )
-
-
-
-
-  ;;MEMORY COMPARE FUNCTIONS
-  (elem declare func $eqMemoryValue)
-  (func $eqMemoryValue (type $p32p32r32) (param $i i32) (param $searchValue i32) (result i32)
-    (call $getValueAt (local.get $i))
-    local.get $searchValue
-    i32.eq
-  )
-  (elem declare func $neMemoryValue)
-  (func $neMemoryValue (type $p32p32r32) (param $i i32) (param $searchValue i32) (result i32)
-    (call $getValueAt (local.get $i))
-    local.get $searchValue
-    i32.ne
-  )
-
-
-  ;;UNTIL LOOPS
-  (table $untilTable 1 funcref)
-  (type $p32p32r32 (func (param i32) (param i32) (result i32)))
-  (type $p32r32 (func (param $i i32) (result i32)))
-  
-  (func $loopUntil (param $i i32) (param $value i32) (param $testFn funcref) (result i32)
-    (table.set $untilTable (i32.const 0) (local.get $testFn))
-
-    (i32.const 1)
-    (call_indirect $untilTable (type $p32p32r32) (local.get $i) (local.get $value) (i32.const 0))
-    i32.sub
-
-    (if
-      (then
-        (block $block
-          (loop $loop
-            (local.set $i (call $inz (local.get $i)))
-
-            (call $isValueEnd (local.get $i))
-            br_if $block
-
-            (table.set $untilTable (i32.const 0) (local.get $testFn))
-            (i32.const 1)
-            (call_indirect $untilTable (type $p32p32r32) (local.get $i) (local.get $value) (i32.const 0))
-            i32.sub
-
-            br_if $loop
-          )
-        )
-      )
-    )
-
-    (local.get $i)
-  )
-
-  (func $loopUntilEq (param $i i32) (param $value i32) (result i32)
-    (call $loopUntil (local.get $i) (local.get $value) (ref.func $eqMemoryValue))
-  )
-
-  (func $loopUntilNe (param $i i32) (param $value i32) (result i32)
-    (call $loopUntil (local.get $i) (local.get $value) (ref.func $neMemoryValue))
-  )
-
-  (func $loopUntilTest (param $i i32) (param $testFn funcref) (result i32)
-    (table.set $untilTable (i32.const 0) (local.get $testFn))
-
-    (i32.const 1)
-    (call_indirect $untilTable (type $p32r32) (local.get $i) (i32.const 0))
-    i32.sub
-
-    (if
-      (then
-        (block $block
-          (loop $loop
-            (local.set $i (call $inz (local.get $i)))
-
-            (call $isValueEnd (local.get $i))
-            br_if $block
-
-
-            (table.set $untilTable (i32.const 0) (local.get $testFn))
-            (i32.const 1)
-            (call_indirect $untilTable (type $p32r32) (local.get $i) (i32.const 0))
-            i32.sub
-
-            br_if $loop
-          )
-        )
-      )
-    )
-
-    (local.get $i)
-  )
-
-
-  ;;WHILE LOOPS
-  (table $whileTable 1 funcref)
-  
-  (func $loopWhile (param $i i32) (param $value i32) (param $testFn funcref) (result i32)
-    (table.set $whileTable (i32.const 0) (local.get $testFn))
-    (call_indirect $whileTable (type $p32p32r32) (local.get $i) (local.get $value) (i32.const 0))
-
-    (if
-      (then
-        (block $block
-          (loop $loop
-            (local.set $i (call $inz (local.get $i)))
-
-            (call $isValueEnd (local.get $i))
-            br_if $block
-
-            (table.set $whileTable (i32.const 0) (local.get $testFn))
-            (call_indirect $whileTable (type $p32p32r32) (local.get $i) (local.get $value) (i32.const 0))
-
-            br_if $loop
-          )
-        )
-      )
-    )
-
-    (local.get $i)
-  )
-
-  (func $loopWhileEq (param $i i32) (param $value i32) (result i32)
-    (call $loopWhile (local.get $i) (local.get $value) (ref.func $eqMemoryValue))
-  )
-
-  (func $loopWhileNe (param $i i32) (param $value i32) (result i32)
-    (call $loopWhile (local.get $i) (local.get $value) (ref.func $neMemoryValue))
-  )
-  
-  (func $loopWhileTest (param $i i32) (param $testFn funcref) (result i32)
-    (table.set $whileTable (i32.const 0) (local.get $testFn))
-    (call_indirect $whileTable (type $p32r32) (local.get $i) (i32.const 0))
-
-    (if
-      (then
-        (block $block
-          (loop $loop
-            (local.set $i (call $inz (local.get $i)))
-
-            (call $isValueEnd (local.get $i))
-            br_if $block
-
-            (table.set $whileTable (i32.const 0) (local.get $testFn))
-            (call_indirect $whileTable (type $p32r32) (local.get $i) (i32.const 0))
-
-            br_if $loop
-          )
-        )
-      )
-    )
-
-    (local.get $i)
-  )
-
-  ;;FIND INDEX
-  (func $indexOf (param $i i32) (param $value i32) (result i32)
-    (call $loopUntilEq (local.get $i) (local.get $value))
-    local.set $i
-
-    (select
-      (i32.const -1)
-      (local.get $i)
-      (call $isValueEnd (local.get $i))
-    )
-  )
-
-
-  ;;GLOBALS
-  (global $dataLen (mut i32) (i32.const 0))
-  (global $argsCount (mut i32) (i32.const 0))
-
-  (global $ltChar (mut i32) (i32.const 0))
-  (global $gtChar (mut i32) (i32.const 1))
-  (global $slashChar (mut i32) (i32.const 2))
-  (global $tagCharsIndex (mut i32) (i32.const 3)) ;;tag chars list
-  (global $spaceCharsIndex (mut i32) (i32.const 4)) ;;space chars list
-  (global $eqChar (mut i32) (i32.const 5))
-  (global $quoteCharIndex (mut i32) (i32.const 6))
-  (global $htmlStrIndex (mut i32) (i32.const 7))
-
-  ;;INIT
-  (func $init
-    (global.set $dataLen (i32.load (i32.const 0)))
-    (global.set $argsCount (i32.load (i32.const 4)))
-
-    (global.set $ltChar (call $getValueAt (call $getValueOffset (i32.const 0))))
-    (global.set $gtChar (call $getValueAt (call $getValueOffset (i32.const 1))))
-    (global.set $slashChar (call $getValueAt (call $getValueOffset (i32.const 2))))
-    
-    (global.set $eqChar (call $getValueAt (call $getValueOffset (i32.const 5))))
-  )
-
-
-  ;;EXPORT
+  ;; PARSE
   (func (export "parseHTML") (param $rootEl externref) (result externref)
-    (local $i i32)
-    (local $end i32)
-    ;;(local $limit i32) (local.set $limit (i32.const 10))
-
-    (call $init)
-    (local.set $i (call $getValueOffset (global.get $htmlStrIndex)))
-    (local.set $end (call $getValueEnd (global.get $htmlStrIndex)))
-
-    (loop $loop
-      (call $parse (local.get $i) (local.get $rootEl))
-      local.set $i
-
-      (call $isCloseTag (local.get $i))
-      (if 
-        (then
-          (call $registerCloseTag (local.get $i) (local.get $rootEl))
-          local.set $i
-        )
-      )
-      
-      (call $logicNOT (call $isValueEnd (local.get $i)))
-      ;;(call $logicAND (i32.gt_u (local.tee $limit (call $dnz (local.get $limit))) (i32.const 0)))
-      br_if $loop
-    )
-
+    (call $parseContent (local.get $rootEl))
     local.get $rootEl
   )
 
-  (func $parse (param $i i32) (param $parentEl externref) (result i32)
+  (func $parseContent (param $parentEl externref)
     (local $subI i32)
-    ;;(local $limit i32)
-    ;;(local.set $limit (i32.const 100))
+    ;;(local $limit i32) (local.set $limit (i32.const 1))
 
     (loop $loop
-      (call $extractTextNode (local.get $i) (local.get $parentEl))
-      local.set $i
+      (block $block
+        call $html.cursor.isOpenTag
+        (if (then
+          (call $parseElement (local.get $parentEl))
+          br $block
+        ))
 
-      (call $isOpenTag (local.get $i))
-      (if
-        (then
-          (call $extractElement (local.get $i) (local.get $parentEl))
-          local.set $i
-        )
+        call $html.cursor.isClosingTag
+        (if (then br $block))
+
+        (call $parseTextNode (local.get $parentEl))
       )
 
-      (call $ignoreOrphanCloseTags (local.get $i) (local.get $parentEl))
-      local.set $i
+      (call $ignoreOrphanClosingTags (local.get $parentEl))
 
-      (call $logicAND
-        (call $logicNOT (call $isCloseTag (local.get $i)))
-        (call $logicNOT (call $isValueEnd (local.get $i)))
+      (call $AND
+        (call $NOT (call $html.cursor.isClosingTag))
+        (call $NOT (call $html.isEnd))
       )
-      ;;(call $logicAND (i32.gt_u (local.tee $limit (call $dnz (local.get $limit))) (i32.const 0)))
+      ;;(call $AND (i32.gt_u (local.tee $limit (i32.sub (local.get $limit) (i32.const 1))) (i32.const 0)))
       br_if $loop
     )
-
-    local.get $i
   )
 
-
-  ;;LOGIC OPERATOR FUNCTIONS
-  (func $logicOR (param $x i32) (param $y i32) (result i32)
-    (select
-      (select
-        (i32.const 0)
-        (i32.const 1)
-        (i32.eqz (local.get $y))
-      )
-      (i32.const 1)
-      (i32.eqz (local.get $x))
-    )    
-  )
-
-  (func $logicAND (param $x i32) (param $y i32) (result i32)
-    (select
-      (i32.const 0)
-      (select
-        (i32.const 0)
-        (i32.const 1)
-        (i32.eqz (local.get $y))
-      )
-      (i32.eqz (local.get $x))
-    )    
-  )
-
-  (func $logicNOT (param $value i32) (result i32)
-    (select
-      (i32.const 1)
-      (i32.const 0)
-      (i32.eqz (local.get $value))
-    )    
-  )
-
-  ;;TAG DETECTION FUNCTIONS
-  (elem declare func $isOpenTag)
-  (func $isOpenTag (param $i i32) (result i32)
-    (i32.eq
-      (call $getValueAt (local.get $i))
-      (global.get $ltChar)
-    )
-    (call $isTagChar
-      (call $inz (local.get $i))
-    )
-    call $logicAND
-  )
-
-  (elem declare func $isCloseTag)
-  (func $isCloseTag (param $i i32) (result i32)
-    (i32.eq
-      (call $getValueAt (local.get $i))
-      (global.get $ltChar)
-    )
-    (i32.eq
-      (call $getValueAt (call $inz (local.get $i)))
-      (global.get $slashChar)
-    )
-    call $logicAND
-  )
-
-  (elem declare func $isTag)
-  (func $isTag (param $i i32) (result i32)
-    (call $logicOR
-      (call $isOpenTag (local.get $i))
-      (call $isCloseTag (local.get $i))
-    )
-  )
-
-  (func $hasEndTagChar (param $i i32) (result i32)
-    (i32.gt_s
-      (call $indexOf (local.get $i) (global.get $gtChar))
-      (i32.const -1)
-    )
-  )
-
-  (func $getEndTagName (param $i i32) (result i32) (result i32)
-    (local $end i32)
-
-    (local.set $i (i32.add (local.get $i) (i32.const 2)))
-    (call $skipSpaces (local.get $i))
-    local.tee $i
-    call $loopOverTagName
-    (local.set $end (call $dnz))
-
-    local.get $i
-    local.get $end
-  )
-
-
-  ;;NODES EXTRACTION FUNCTIONS
-  (func $extractTextNode (param $i i32) (param $parentEl externref) (result i32)
-    (local $j i32)
-
-    ;;early return
-    (call $isTag (local.get $i))
+  ;; TAG TESTS
+  (elem declare func $html.cursor.isOpenTag)
+  (func $html.cursor.isOpenTag (result i32)
+    call $html.cursor.isTagOpenChar
     (if (then
-      (return (local.get $i))
+      (return (call $html.cursor.isTagNameChar))
     ))
-
-    ;;early return
-    (call $isValueEnd (local.get $i))
-    (if (then
-      (return (local.get $i))
-    ))
-
-    (call $loopUntilTest (call $inz (local.get $i)) (ref.func $isTag))
-    local.set $j
-
-    (call $rawExtractTextNode (local.get $i) (local.get $j) (local.get $parentEl))
-
-    local.get $j
+    (return (i32.const 0))
   )
 
-  (func $rawExtractTextNode (param $start i32) (param $end i32) (param $parentEl externref)
-    (i32.ne (local.get $start) (local.get $end))
+  (elem declare func $html.cursor.isClosingTag)
+  (func $html.cursor.isClosingTag (result i32)
+    call $html.cursor.isTagOpenChar
     (if (then
-      (call $registerTextNode (local.get $start) (call $dnz (local.get $end)) (local.get $parentEl))
+      (return (call $html.cursor.next.isSlashChar))
+    ))
+    (return (i32.const 0))
+  )
+
+  (elem declare func $html.cursor.isTag)
+  (func $html.cursor.isTag (result i32)
+    call $html.cursor.isOpenTag
+    (if (then
+      (return (i32.const 1))
+    ))
+    call $html.cursor.isClosingTag
+  )
+
+
+  ;; TEXT NODES
+  (func $parseTextNode (param $parentEl externref)
+    (call $html.select.until (ref.func $html.cursor.isTag))
+    (i32.ne (call $html.selection.length) (i32.const 0))
+    (if (then
+      call $html.selection.get
+      (call $js.registerTextNode (local.get $parentEl))
+      call $html.cursor.inz
     ))
   )
 
-  (func $registerCloseTag (param $i i32) (param $currentEl externref) (result i32)
-    (local $start i32)
-    (local $end i32)
-
-    (call $getEndTagName (local.get $i))
-    local.set $end
-    local.set $start
-
-    (call $isEndTagOf (local.get $start) (local.get $end) (local.get $currentEl))
-    (if (then
-      (call $logEndTag (local.get $start) (local.get $end) (local.get $currentEl))
-      (call $loopUntilEq (local.get $end) (global.get $gtChar))
-      (return (call $inz))
-    ))
-
-    local.get $i
+  ;; TAGS
+  (func $getTagName (result externref)
+    ;; skip "<"
+    call $html.cursor.inz
+    (call $html.skip.while (ref.func $html.cursor.isSpaceChar))
+    (call $html.select.while (ref.func $html.cursor.isTagnameChar))
+    call $html.selection.get
+    call $html.cursor.inz
   )
 
-  (func $ignoreOrphanCloseTags (param $i i32) (param $el externref) (result i32)
-    (local $j i32)
-    (local.set $j (local.get $i))
-
-    (loop $loop
-      (local.set $i (local.get $j))
-
-      (call $isCloseTag (local.get $j ))
-      (if
-        (then
-          (call $isOrphanEndTag (call $getEndTagName (local.get $j)) (local.get $el))
-          (if (then
-            (call $ignoreCloseTag (local.get $j) (local.get $el))
-            (local.set $j)
-          ))
-        )
-      )
-
-      (call $logicAND
-        (i32.ne (local.get $i) (local.get $j))
-        (call $logicNOT (call $isValueEnd (local.get $j)))
-      )
-      br_if $loop
-    )
-
-    (local.get $i)
+  (func $getEndTagName (result externref)
+    ;; skip "</"
+    (call $html.cursor.set (i32.add (call $html.cursor.get) (i32.const 2)))
+    (call $html.skip.while (ref.func $html.cursor.isSpaceChar))
+    (call $html.select.while (ref.func $html.cursor.isTagnameChar))
+    call $html.selection.get
+    call $html.cursor.inz
   )
 
-  (func $ignoreCloseTag (param $i i32) (param $currentEl externref) (result i32)
-    (local $j i32)
+  (func $registerClosingTag (param $currentEl externref)
+    (local $tagName externref)
 
-    (local.set $i (i32.add (local.get $i) (i32.const 2)))
-    (call $skipSpaces (local.get $i))
-    local.tee $i
-    call $loopOverTagName
-    local.set $j
-    (call $logEndTag (local.get $i) (call $dnz (local.get $j)) (local.get $currentEl))
-    (call $loopUntilEq (local.get $i) (global.get $gtChar))
-
-    call $inz
-  )
-
-  (func $extractElement (param $i i32) (param $parentEl externref) (result i32)
-    (local $el externref)
-    (local $start i32)
-    (local $end i32)
-    
-    (local.set $start (call $inz (local.get $i)))
-    (call $skipSpaces (local.get $start))
-    local.set $start
-    (call $loopOverTagName (local.get $start))
-    local.set $end
-    (call $createElement (local.get $start) (call $dnz (local.get $end)))
-    local.set $el
-    (call $extractAttributes (local.get $end) (local.get $el))
-    local.set $end
-
-    (call $logicNOT (call $isEndTagChar (local.get $end)))
+    call $html.cursor.save
+    (local.set $tagName (call $getEndTagName))
+    (call $js.isClosingTagOf (local.get $tagName) (local.get $currentEl))
     (if
       (then
-        (call $rawExtractTextNode (local.get $i) (local.get $end) (local.get $parentEl))
-        (return (local.get $end))
+        (call $js.registerClosingTag (local.get $tagName) (local.get $currentEl))
+        (call $html.skip.until (ref.func $html.cursor.isTagClosingChar))
+        call $html.cursor.inz
+      )
+      (else
+        (call $js.createMissingClosingTag (local.get $tagName) (local.get $currentEl))
+        call $html.cursor.restaure
       )
     )
-    (call $registerElement (local.get $el) (local.get $parentEl))
-    (call $isSelfClosingEl (local.get $el))
-    (if
-      (then
-        (call $logEndTag (i32.const -1) (i32.const -1) (local.get $el))
-        (return (local.get $end))
-      )
-    )
-
-    (call $parse (call $inz (local.get $end)) (local.get $el))
-    local.set $end
-
-    (call $isCloseTag (local.get $end))
-    (if 
-      (then
-        (call $registerCloseTag (local.get $end) (local.get $el))
-        return
-      )
-    )
-
-    local.get $end
+    call $html.cursor.save
   )
 
-  (func $extractAttributes (param $i i32) (param $el externref) (result i32)
-    (local $nameStart i32)
-    (local $nameEnd i32)
-    (local $valueStart i32)
-    (local $valueEnd i32)
+  (func $ignoreOrphanClosingTags (param $el externref)
+    (local $tagName externref)
 
     (loop $loop
-      (call $skipNonAttrNameChars (local.get $i))
-      local.set $i
-    
-      (call $logicNOT (call $isEndTagChar (local.get $i)))
-      (call $logicNOT (call $isValueEnd (local.get $i)))
-      call $logicAND
+      call $html.cursor.save
+
+      call $html.cursor.isClosingTag
       (if
         (then
-          (local.set $valueStart (i32.const -1))
-          (local.set $valueEnd (i32.const -1))
-          (local.tee $nameStart (local.get $i))
-          (local.tee $nameEnd (call $extractAttrName))
-          (local.tee $i (call $skipSpaces (call $inz)))
+          (local.tee $tagName (call $getEndTagName))
+          local.get $el
 
-          call $isEqChar
+          call $js.isOrphanClosingTag
           (if
             (then
-              (local.set $i (call $skipSpaces (call $inz(local.get $i))))
-
-              (call $logicNOT (call $isEndTagChar (local.get $i)))
-              (call $logicNOT (call $isValueEnd (local.get $i)))
-              call $logicAND
-              (if
-                (then
-                  (call $extractAttrValue (local.get $i))
-                  local.set $valueStart
-                  local.tee $valueEnd
-                  (local.set $i (i32.add (i32.const 2)))
-                )
-              )
+              ;; js hook
+              (call $js.ignoreOrphanClosingTag (local.get $tagName))
+              ;; skip until tag end char
+              (call $html.skip.while (ref.func $html.cursor.isTagClosingChar))
+            )
+            (else
+              call $html.cursor.restaure
             )
           )
+        )
+      )
 
-          (call $registerElementAttribute
-            (local.get $nameStart)
-            (local.get $nameEnd)
-            (local.get $valueStart)
-            (local.get $valueEnd)
+      (call $AND
+        (call $html.cursor.hasMoved)
+        (i32.eqz (call $html.isEnd))
+      )
+      br_if $loop
+    )
+  )
+
+  ;; ELEMENT NODES
+  (func $parseElement (param $parentEl externref)
+    (local $el externref)
+    (local $savedPosition i32)
+    
+    (local.set $savedPosition (call $html.cursor.get))
+    
+
+    ;; create element
+    call $getTagName
+    call $js.createElement
+    local.set $el
+
+    ;; extract attributes
+    (call $parseAttributes (local.get $el))
+
+    (call $NOT (call $html.cursor.isTagClosingChar))
+    (if
+      (then
+        (call $html.select.from (local.get $savedPosition))
+        (i32.ne (call $html.selection.length) (i32.const 0))
+        (if (then
+          call $html.selection.get
+          (call $js.registerTextNode (local.get $parentEl))
+          call $html.cursor.inz
+        ))
+        return
+      )
+      (else
+        call $html.cursor.inz
+      )
+    )
+    (call $js.registerElement (local.get $el) (local.get $parentEl))
+
+    (call $js.isSelfClosingEl (local.get $el))
+    (if (then return))
+
+    (call $parseContent (local.get $el))
+
+    call $html.cursor.isClosingTag
+    (if (then
+      (call $registerClosingTag (local.get $el))
+    ))
+  )
+
+  ;; ATTRIBUTES
+  (func $parseAttributes (param $el externref)
+    (loop $loop
+      (call $html.skip.while (ref.func $html.cursor.isSlashOrSpaceChar))
+  
+      call $html.cursor.isAttrNameChar
+      (if
+        (then
+          (call $js.registerAttribute
+            (call $getAttrName)
+            (call $getAttrValue)
             (local.get $el)
           )
         )
       )
 
-      (call $logicNOT (call $isEndTagChar (local.get $i)))
-      (call $logicNOT (call $isValueEnd (local.get $i)))
-      call $logicAND
+      (call $NOT (call $html.cursor.isTagEnd))
       br_if $loop
     )
-
-    local.get $i
   )
 
-  (func $extractAttrName (param $i i32) (result i32)
+  (func $getAttrName (result externref)
+    call $html.cursor.save
     (loop $loop
-      (local.set $i (call $inz (local.get $i)))
-
-      (call $logicNOT (call $isSpaceChar (local.get $i)))
-      (call $logicNOT (call $isEqChar (local.get $i)))
-      call $logicAND
-      (call $logicNOT (call $isEndTagChar (local.get $i)))
-      call $logicAND
-      (call $logicNOT (call $isValueEnd (local.get $i)))
-      call $logicAND
+      call $html.cursor.inz
+      (call $AND
+        (call $html.cursor.isAttrNameChar)
+        (call $NOT (call $html.cursor.isEqChar))
+      )
       br_if $loop
     )
-
-    (call $dnz (local.get $i))
+    call $html.select.fromSaved
+    call $html.selection.get
   )
 
-  (func $extractAttrValue (param $i i32) (result i32) (result i32)
-    (local $endChar i32)
-    (local $start i32)
-    (local $end i32)
+  (func $getAttrValue (result externref)
+    (call $html.skip.while (ref.func $html.cursor.isSpaceChar))
 
-    (call $isQuoteChar (local.get $i))
+    (call $NOT (call $html.cursor.isEqChar))
     (if
       (then
-        (local.set $endChar (call $getValueAt (local.get $i)))
-        (local.set $start (call $inz (local.get $i)))
-        (call $loopUntilEq (local.get $start) (local.get $endChar))
-        (local.set $end (call $dnz))
+        call $html.selection.clear
+        call $html.selection.get
+        return
+      )
+    )
+
+    call $html.cursor.inz
+    (call $html.skip.while (ref.func $html.cursor.isSpaceChar))
+
+    call $html.cursor.isTagEnd
+    (if
+      (then
+        call $html.selection.clear
+        call $html.selection.get
+        return
+      )
+    )
+
+    (call $html.cursor.isQuoteChar)
+    (if
+      (then
+        call $html.cursor.char.save
+        call $html.cursor.inz
+        (call $html.select.until (ref.func $html.cursor.isSavedChar))
+        call $html.cursor.inz
+        call $html.cursor.inz
       )
       (else
-        (local.set $start (local.get $i))
-        (call $loopUntilTest (local.get $i) (ref.func $isSpaceChar))
-        (local.set $end (call $dnz))
+        (call $html.select.until (ref.func $html.cursor.isSpaceChar))
+        call $html.cursor.inz
       )
     )
-
-    local.get $end
-    local.get $start
+    call $html.selection.get
   )
 
-  (func $skipNonAttrNameChars (param $i i32) (result i32)
-    (loop $loop
-      (call $skipSpaces (local.get $i))
-      local.set $i
-      (call $loopWhileEq (local.get $i) (global.get $slashChar))
-      local.set $i
-
-      (call $isSpaceChar (local.get $i))
-      (call $logicNOT (call $isValueEnd (local.get $i)))
-      call $logicAND
-      br_if $loop
-    )
-
-    local.get $i
-  )
-
-  (func $isEndTagChar (param $i i32) (result i32)
+  ;; CHAR TESTS
+  (func $html.cursor.isTagOpenChar (result i32)
     (i32.eq
-      (call $getValueAt (local.get $i))
+      (call $html.cursor.char)
+      (global.get $ltChar)
+    )
+  )
+
+  (elem declare func $html.cursor.isTagClosingChar)
+  (func $html.cursor.isTagClosingChar (result i32)
+    (i32.eq
+      (call $html.cursor.char)
       (global.get $gtChar)
     )
   )
 
-  (func $isEqChar (param $i i32) (result i32)
+  (elem declare func $html.cursor.isTagEnd)
+  (func $html.cursor.isTagEnd (result i32)
+    call $html.cursor.isTagClosingChar
+    (if (then (return (i32.const 1))))
+    call $html.isEnd
+  )
+
+  (elem declare func $html.cursor.isTagNameChar)
+  (func $html.cursor.isTagNameChar (result i32)
+    (call $tagnameCharset.includes (call $html.cursor.nextChar))
+  )
+
+  (elem declare func $html.cursor.next.isSlashChar)
+  (func $html.cursor.next.isSlashChar (result i32)
     (i32.eq
-      (call $getValueAt (local.get $i))
+      (call $html.cursor.nextChar)
+      (global.get $slashChar)
+    )
+  )
+
+  (elem declare func $html.cursor.isSlashChar)
+  (func $html.cursor.isSlashChar (result i32)
+    (i32.eq
+      (call $html.cursor.char)
+      (global.get $slashChar)
+    )
+  )
+
+  (elem declare func $html.cursor.isEqChar)
+  (func $html.cursor.isEqChar (result i32)
+    (i32.eq
+      (call $html.cursor.char)
       (global.get $eqChar)
     )
   )
 
-  (func $isQuoteChar (param $i i32) (result i32)
-    (call $matchAny
-      (call $getValueAt (local.get $i))
-      (global.get $quoteCharIndex)
+  (elem declare func $html.cursor.isSpaceChar)
+  (func $html.cursor.isSpaceChar (result i32)
+    (call $spaceCharset.includes (call $html.cursor.char))
+  )
+
+  (elem declare func $html.cursor.isTagnameChar)
+  (func $html.cursor.isTagnameChar (result i32)
+    (call $tagnameCharset.includes (call $html.cursor.char))
+  )
+
+  (elem declare func $html.cursor.isQuoteChar)
+  (func $html.cursor.isQuoteChar (result i32)
+    (call $quoteCharset.includes (call $html.cursor.char))
+  )
+
+  (elem declare func $html.cursor.isSlashOrSpaceChar)
+  (func $html.cursor.isSlashOrSpaceChar (result i32)
+    call $html.cursor.isSpaceChar
+    (if (then (return (i32.const 1))))
+    (return (call $html.cursor.isSlashChar))
+  )
+
+  (elem declare func $html.cursor.isAttrNameChar)
+  (func $html.cursor.isAttrNameChar (result i32)
+    (call $NOT (call $html.cursor.isSlashOrSpaceChar))
+    (if (then
+      (return (call $NOT (call $html.cursor.isTagEnd))))
     )
-  )
-
-  (elem declare func $isSpaceChar)
-  (func $isSpaceChar (param $i i32) (result i32)
-    (call $matchAny
-      (call $getValueAt (local.get $i))
-      (global.get $spaceCharsIndex)
-    )
-  )
-
-  (func $loopOverTagName (param $i i32) (result i32)
-    (call $loopWhileTest (local.get $i) (ref.func $isTagChar))
-  )
-
-  (elem declare func $isTagChar)
-  (func $isTagChar (param $i i32) (result i32)
-    (call $matchAny
-      (call $getValueAt (local.get $i))
-      (global.get $tagCharsIndex)
-    )
-  )
-
-  (func $skipSpaces (param $i i32) (result i32)
-    (call $loopWhileTest (local.get $i) (ref.func $isSpaceChar))
-  )
-
-  (func $matchAny (param $char i32) (param $charListIndex i32) (result i32)
-    (local $i i32)
-    (local $end i32)
-
-    (local.set $i (call $getValueOffset (local.get $charListIndex)))
-    (local.set $end (call $getValueEnd (local.get $charListIndex)))
-    
-    (block $block
-      (loop $loop
-        (i32.ne (local.get $char) (call $getValueAt (local.get $i)))
-        (local.set $i (call $inz (local.get $i)))
-        (call $logicNOT (call $isValueEnd (local.get $i)))
-        call $logicAND
-        br_if $loop
-      )
-    )
-
-    (call $logicNOT (call $isValueEnd (local.get $i)))
-  )
-
-
-  ;;VALUES COMPARE FUNCTIONS
-  (func $stringCompare (param $str1Start i32) (param $str1End i32) (param $str2Start i32) (param $str2End i32) (result i32)
-    (local $i i32)
-    (local $result i32)
-    (local $length i32)
-
-    (call $strLen (local.get $str1Start) (local.get $str1End))
-    (call $strLen (local.get $str2Start) (local.get $str2End))
-    local.tee $length
-    (local.tee $result (call $valueCompare))
-    (if (then (return (local.get $result))))
-
-    (local.set $i (i32.const 0))
-    (loop $loop
-      (call $valueCompare
-        (call $getValueAt (i32.add (local.get $str1Start) (local.get $i)))
-        (call $getValueAt (i32.add (local.get $str2Start) (local.get $i)))
-      )
-      local.tee $result
-      i32.eqz
-
-      (local.set $i (call $inz (local.get $i)))
-      (i32.lt_u (local.get $i) (local.get $length))
-
-      call $logicAND
-      br_if $loop
-    )
-
-    local.get $result
-  )
-
-  (func $strLen (param $start i32) (param $end i32) (result i32)
-    (i32.sub (local.get $end) (local.get $start))
-  )
-
-  (func $valueCompare (param $value1 i32) (param $value2 i32) (result i32)
-    (i32.gt_u (local.get $value1) (local.get $value2))
-    (if
-      (then
-        (return (i32.const 1))
-      )
-    )
-
-    (i32.lt_u (local.get $value1) (local.get $value2))
-    (if
-      (then
-        (return (i32.const -1))
-      )
-    )
-
     i32.const 0
   )
 

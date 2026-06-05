@@ -1,14 +1,23 @@
 import Charon from '../src/Charon.js';
+import { logHooks } from './hooks.js';
 
-window.addEventListener('DOMContentLoaded', e => {
-  document.querySelector('#parseBt').addEventListener('click', parse);
+
+let htmlParser;
+
+window.addEventListener('DOMContentLoaded', async e => {
+  htmlParser = await Charon.createHTMLParser(logHooks);
+
+  document.querySelector('#parseBt').addEventListener('click', e => {
+    console.clear();
+    parse();
+  });
+  
   parse();
 });
 
 async function parse() {
-  //console.clear();
-  console.log('START TO PARSE...');
   const html = document.querySelector('textarea').value;
-  const rootEl = await Charon.parser.parseHTML(html);
-  console.log('COMPLETE!', rootEl);
+  const rootEl = htmlParser.parse(html);
+
+  console.log('Result:', rootEl);
 }
