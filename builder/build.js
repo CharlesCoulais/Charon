@@ -169,7 +169,7 @@ function watchForChanges(callback) {
   );
 }
 
-function removeBuildFile(fileBuildObject) {
+function removeBuildFile({ buildFilePath , targetFilename}) {
   return new Promise(resolve => unlink(buildFilePath, err => {
     err && console.error(err);
     console.log('🗑️  Remove', targetFilename);
